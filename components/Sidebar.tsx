@@ -20,9 +20,11 @@ interface SidebarProps {
   setFilter: (filter: string) => void;
   tasks: Task[];
   onLogout: () => void;
+  isMobile?: boolean;
+  onClose?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ user, view, setView, filter, setFilter, tasks, onLogout }) => {
+const Sidebar: React.FC<SidebarProps> = ({ user, view, setView, filter, setFilter, tasks, onLogout, isMobile = false, onClose }) => {
   
   const activeCategories = useMemo(() => {
     const cats = new Set(tasks.map(t => t.category));
@@ -31,8 +33,25 @@ const Sidebar: React.FC<SidebarProps> = ({ user, view, setView, filter, setFilte
 
   const activeCount = tasks.filter(t => t.status !== TaskStatus.DONE).length;
 
+  const outerClass = isMobile
+    ? 'w-64 bg-white border-r border-slate-200 flex flex-col md:hidden shadow-lg z-50 h-full'
+    : 'w-64 bg-white border-r border-slate-200 flex flex-col hidden md:flex shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)] z-10';
+
   return (
-    <aside className="w-64 bg-white border-r border-slate-200 flex flex-col hidden md:flex shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)] z-10">
+    <aside className={outerClass}>
+      {isMobile && (
+        <div className="p-3 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="bg-indigo-600 p-1 rounded-lg">
+              <CheckSquare className="text-white" size={18} />
+            </div>
+            <h1 className="text-lg font-bold text-slate-800 tracking-tight">Task Flow</h1>
+          </div>
+          <div>
+            <button onClick={onClose} className="px-2 py-1 rounded-md text-slate-600">Close</button>
+          </div>
+        </div>
+      )}
         <div className="p-6 flex-1 overflow-y-auto">
           <div className="flex items-center gap-2 mb-8">
             <div className="bg-indigo-600 p-1.5 rounded-lg">

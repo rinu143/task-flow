@@ -50,7 +50,7 @@ const TaskPage: React.FC<TaskPageProps> = ({ tasks, setTasks, filter }) => {
       scheduledTime: newTaskDate
     };
 
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (!token) {
       setTasks([newTask, ...tasks]);
       setNewTaskTitle('');
@@ -95,7 +95,7 @@ const TaskPage: React.FC<TaskPageProps> = ({ tasks, setTasks, filter }) => {
   };
 
   const toggleTask = (id: string) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     const existing = tasks.find(t => t.id === id);
     if (!existing) return;
     const newStatus = existing.status === TaskStatus.DONE ? TaskStatus.TODO : TaskStatus.DONE;
@@ -123,7 +123,7 @@ const TaskPage: React.FC<TaskPageProps> = ({ tasks, setTasks, filter }) => {
   };
 
   const deleteTask = (id: string) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (!token) {
       setTasks(tasks.filter(t => t.id !== id));
       return;
@@ -147,7 +147,7 @@ const TaskPage: React.FC<TaskPageProps> = ({ tasks, setTasks, filter }) => {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (!token) return;
 
     fetch('http://localhost:5000/api/tasks', {

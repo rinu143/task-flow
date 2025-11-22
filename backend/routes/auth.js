@@ -4,15 +4,59 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
 const router = express.Router();
+const auth = require("../middleware/auth");
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
+// Password strength helpers
+function getPasswordStrength(password) {
+  if (!password) return 0;
+  let score = 0;
+  const hasLower = /[a-z]/.test(password);
+  const hasUpper = /[A-Z]/.test(password);
+  const hasDigit = /\d/.test(password);
+  const hasSpecial = /[!@#$%^&*(),.?":{}|<>_\-\\\/\[\];'`~+=]/.test(password);
+  score += hasLower + hasUpper + hasDigit + hasSpecial; // 0..4
+  if (password.length >= 10) score = Math.min(4, score + 1);
+  return Math.min(4, score);
+}
+
+function isStrongEnough(password) {
+  if (!password) return false;
+  if (password.length < 6) return false;
+  return getPasswordStrength(password) >= 3; // require at least 3 categories
+}
+
 router.post("/signup", async (req, res) => {
   try {
-    console.log("[AUTH] POST /api/auth/signup", { ip: req.ip, body: req.body });
+    const safeBodySignup = { ...req.body };
+    if (safeBodySignup.password) safeBodySignup.password = "***";
+    console.log("[AUTH] POST /api/auth/signup", {
+      ip: req.ip,
+      body: safeBodySignup,
+    });
     const { name, email, password } = req.body;
     if (!name || !email || !password)
       return res.status(400).json({ message: "Missing fields" });
+
+    // validate password
+    if (password.length < 6) {
+      return res
+        .status(400)
+        .json({
+          message: "Password must be at least 6 characters long",
+          strength: getPasswordStrength(password),
+        });
+    }
+    if (!isStrongEnough(password)) {
+      return res
+        .status(400)
+        .json({
+          message:
+            "Password is too weak. Use a mix of uppercase, lowercase, digits and special characters.",
+          strength: getPasswordStrength(password),
+        });
+    }
 
     const existing = await User.findOne({ email });
     if (existing)
@@ -41,7 +85,12 @@ router.post("/signup", async (req, res) => {
 
 router.post("/login", async (req, res) => {
   try {
-    console.log("[AUTH] POST /api/auth/login", { ip: req.ip, body: req.body });
+    const safeBodyLogin = { ...req.body };
+    if (safeBodyLogin.password) safeBodyLogin.password = "***";
+    console.log("[AUTH] POST /api/auth/login", {
+      ip: req.ip,
+      body: safeBodyLogin,
+    });
     const { email, password } = req.body;
     if (!email || !password)
       return res.status(400).json({ message: "Missing fields" });
@@ -69,6 +118,20 @@ router.post("/login", async (req, res) => {
     res.json({ user: { name: user.name, email: user.email }, token });
   } catch (err) {
     console.error("[AUTH] Login error", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// GET /api/auth/me - return current user (requires Authorization header)
+router.get("/me", auth, async (req, res) => {
+  try {
+    const userId = req.user && req.user.id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    const user = await User.findById(userId).select("name email");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json({ user: { name: user.name, email: user.email } });
+  } catch (err) {
+    console.error("[AUTH] /me error", err);
     res.status(500).json({ message: "Server error" });
   }
 });
