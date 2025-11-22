@@ -18,11 +18,32 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     if (isSignUp && !name) return;
 
     setIsLoading(true);
-    // Simulate network delay
-    setTimeout(() => {
-      onLogin(email, isSignUp ? name : undefined);
-      setIsLoading(false);
-    }, 800);
+
+    const endpoint = isSignUp ? 'http://localhost:5000/api/auth/signup' : 'http://localhost:5000/api/auth/login';
+    const body = isSignUp ? { name, email, password } : { email, password };
+
+    fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Auth failed');
+        // store token
+        if (data.token) localStorage.setItem('token', data.token);
+        // call parent to set UI state using returned user if available
+        if (data.user && data.user.name) {
+          onLogin(data.user.email, data.user.name);
+        } else {
+          onLogin(email, isSignUp ? name : undefined);
+        }
+      })
+      .catch((err) => {
+        console.error('Auth error', err);
+        alert(err.message || 'Authentication failed');
+      })
+      .finally(() => setIsLoading(false));
   };
 
   const toggleMode = () => {

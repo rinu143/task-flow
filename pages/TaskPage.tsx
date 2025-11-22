@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Plus, Calendar, Hash, Layout, CheckCircle2, Trash2 } from 'lucide-react';
 import { Task, TaskStatus, Priority } from '../types';
 import DatePickerPopup from '../components/DatePickerPopup';
@@ -50,23 +50,126 @@ const TaskPage: React.FC<TaskPageProps> = ({ tasks, setTasks, filter }) => {
       scheduledTime: newTaskDate
     };
 
-    setTasks([newTask, ...tasks]);
-    setNewTaskTitle('');
-    setNewTaskDate(getLocalTodayString());
-    setShowDatePicker(false);
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setTasks([newTask, ...tasks]);
+      setNewTaskTitle('');
+      setNewTaskDate(getLocalTodayString());
+      setShowDatePicker(false);
+      return;
+    }
+
+    fetch('http://localhost:5000/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        title: newTaskTitle,
+        category: categoryToUse,
+        scheduledTime: newTaskDate,
+        estimatedDuration: 30
+      })
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Failed to create task');
+        const t = data.task;
+        const mapped: Task = {
+          id: t._id,
+          title: t.title,
+          description: t.description,
+          priority: t.priority,
+          status: t.status,
+          estimatedDuration: t.estimatedDuration,
+          category: t.category,
+          scheduledTime: t.scheduledTime
+        };
+        setTasks([mapped, ...tasks]);
+        setNewTaskTitle('');
+        setNewTaskDate(getLocalTodayString());
+        setShowDatePicker(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        alert(err.message || 'Could not add task');
+      });
   };
 
   const toggleTask = (id: string) => {
-    setTasks(tasks.map(t => 
-      t.id === id 
-        ? { ...t, status: t.status === TaskStatus.DONE ? TaskStatus.TODO : TaskStatus.DONE } 
-        : t
-    ));
+    const token = localStorage.getItem('token');
+    const existing = tasks.find(t => t.id === id);
+    if (!existing) return;
+    const newStatus = existing.status === TaskStatus.DONE ? TaskStatus.TODO : TaskStatus.DONE;
+
+    if (!token) {
+      setTasks(tasks.map(t => t.id === id ? { ...t, status: newStatus } : t));
+      return;
+    }
+
+    fetch(`http://localhost:5000/api/tasks/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ status: newStatus })
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Failed to update task');
+        const t = data.task;
+        setTasks(tasks.map(x => x.id === id ? { ...x, status: t.status } : x));
+      })
+      .catch((err) => {
+        console.error(err);
+        alert(err.message || 'Could not update task');
+      });
   };
 
   const deleteTask = (id: string) => {
-    setTasks(tasks.filter(t => t.id !== id));
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setTasks(tasks.filter(t => t.id !== id));
+      return;
+    }
+
+    fetch(`http://localhost:5000/api/tasks/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.message || 'Failed to delete');
+        }
+        setTasks(tasks.filter(t => t.id !== id));
+      })
+      .catch((err) => {
+        console.error(err);
+        alert(err.message || 'Could not delete task');
+      });
   };
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    fetch('http://localhost:5000/api/tasks', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Failed to fetch tasks');
+        const mapped = (data.tasks || []).map((t: any) => ({
+          id: t._id,
+          title: t.title,
+          description: t.description,
+          priority: t.priority,
+          status: t.status,
+          estimatedDuration: t.estimatedDuration,
+          scheduledTime: t.scheduledTime,
+          category: t.category
+        }));
+        setTasks(mapped);
+      })
+      .catch((err) => console.error('Failed to load tasks', err));
+  }, [setTasks]);
 
   const filteredTasks = tasks.filter(task => {
     if (filter === 'all') return true;
