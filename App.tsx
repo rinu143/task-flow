@@ -43,7 +43,9 @@ const App: React.FC = () => {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (!token) return;
 
-    fetch('http://localhost:5000/api/auth/me', {
+    const API_BASE = ((import.meta as any).env?.VITE_API_URL);
+
+    fetch(`${API_BASE}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(async (res) => {

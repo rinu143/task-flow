@@ -35,7 +35,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
     setIsLoading(true);
 
-    const endpoint = isSignUp ? 'http://localhost:5000/api/auth/signup' : 'http://localhost:5000/api/auth/login';
+    const API_BASE = ((import.meta as any).env?.VITE_API_URL);
+    const endpoint = isSignUp ? `${API_BASE}/api/auth/signup` : `${API_BASE}/api/auth/login`;
     const body = isSignUp ? { name, email, password } : { email, password };
 
     fetch(endpoint, {

@@ -59,7 +59,9 @@ const TaskPage: React.FC<TaskPageProps> = ({ tasks, setTasks, filter }) => {
       return;
     }
 
-    fetch('http://localhost:5000/api/tasks', {
+    const API_BASE = ((import.meta as any).env?.VITE_API_URL);
+
+    fetch(`${API_BASE}/api/tasks`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({
@@ -105,7 +107,9 @@ const TaskPage: React.FC<TaskPageProps> = ({ tasks, setTasks, filter }) => {
       return;
     }
 
-    fetch(`http://localhost:5000/api/tasks/${id}`, {
+    const API_BASE = ((import.meta as any).env?.VITE_API_URL) || 'http://localhost:5000';
+
+    fetch(`${API_BASE}/api/tasks/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ status: newStatus })
@@ -129,7 +133,9 @@ const TaskPage: React.FC<TaskPageProps> = ({ tasks, setTasks, filter }) => {
       return;
     }
 
-    fetch(`http://localhost:5000/api/tasks/${id}`, {
+    const API_BASE = ((import.meta as any).env?.VITE_API_URL) || 'http://localhost:5000';
+
+    fetch(`${API_BASE}/api/tasks/${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` }
     })
@@ -150,7 +156,9 @@ const TaskPage: React.FC<TaskPageProps> = ({ tasks, setTasks, filter }) => {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (!token) return;
 
-    fetch('http://localhost:5000/api/tasks', {
+    const API_BASE = ((import.meta as any).env?.VITE_API_URL) || 'http://localhost:5000';
+
+    fetch(`${API_BASE}/api/tasks`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(async (res) => {
